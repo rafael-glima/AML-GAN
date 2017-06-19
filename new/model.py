@@ -129,7 +129,7 @@ def model_opt(d_loss, g_loss, learning_rate, beta1):
 
     with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
         d_train_opt = tf.train.AdamOptimizer(learning_rate, beta1=beta1).minimize(d_loss, var_list=d_vars)
-        g_train_opt = tf.train.AdamOptimizer(learning_rate, beta1=beta1).minimize(g_loss, var_list=g_vars)
+        # g_train_opt = tf.train.AdamOptimizer(learning_rate, beta1=beta1).minimize(g_loss, var_list=g_vars)
         g_train_opt = tf.train.AdamOptimizer(learning_rate, beta1=beta1).minimize(g_loss, var_list=g_vars)
 
         return d_train_opt, g_train_opt
@@ -191,7 +191,7 @@ def train(epoch_count, batch_size, z_dim, learning_rate, beta1, get_batches, dat
                 batch_z = np.random.uniform(-1,1, size=(batch_size, z_dim))
                 batch_images = batch_images *2
 
-                _ = sess.run(d_opt, feed_dict = {input_real: batch_images, input_z:batch_z, lr: learning_rate})
+                _ = sess.run(d_opt, feed_dict = {input_real: batch_images, input_z:batch_z, lr: learning_rate /5})
                 summary, _ = sess.run([merged, g_opt], feed_dict = {input_z: batch_z, input_real:batch_images})
                 writer.add_summary(summary, step)
 
