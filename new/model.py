@@ -175,7 +175,7 @@ def train(epoch_count, batch_size, z_dim, learning_rate, beta1, get_batches, dat
 
 
 data_dir = '../data'
-helper.download_extract('celeba', data_dir)
+# helper.download_extract('celeba', data_dir)
 
 
 batch_size = 64
@@ -189,7 +189,7 @@ os.makedirs(path)
 
 epochs = 100
 
-mnist_dataset = helper.Dataset('mnist', glob(os.path.join(data_dir, 'img_align_celeba/*.jpg')))
+mnist_dataset = helper.Dataset('celeba', glob(os.path.join(data_dir, 'CelebA/images/*.jpg')))
 with tf.Graph().as_default():
     train(epochs, batch_size, z_dim, learning_rate, beta1, mnist_dataset.get_batches,
           mnist_dataset.shape, mnist_dataset.image_mode, path)
