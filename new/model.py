@@ -71,31 +71,55 @@ def generator(z, out_chanel_dim, is_train=True):
 
         return out
 
-def model_loss(input_real, input_z, out_chanel_dim, smooth = 0.1):
-
-    g_model = generator(input_z, out_chanel_dim)
+def model_loss(input_real, input_z, out_channel_dim, smooth = 0.1):
+    """
+    Get the loss for the discriminator and generator
+    :param input_real: Images from the real dataset
+    :param input_z: Z input
+    :param out_channel_dim: The number of channels in the output image
+    :return: A tuple of (discriminator loss, generator loss)
+    """
+    g_model = generator(input_z, out_channel_dim)
     d_model_real, d_logits_real = discriminator(input_real)
     d_model_fake, d_logits_fake = discriminator(g_model, reuse=True)
-
     d_loss_real = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_real,
-                                                labels=tf.ones_like(d_model_real)*(1 - smooth)))
-
+                                                labels=tf.ones_like(d_model_real) * (1 - smooth)))
     d_loss_fake = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
-                                                labels=tf.ones_like(d_model_fake)
-                                                )
-    )
-
+                                                labels=tf.zeros_like(d_model_fake)))
     d_loss = d_loss_real + d_loss_fake
 
     g_loss = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
-                                                labels=tf.ones_like(d_model_fake)
-                                                )
-    )
-
+                                                labels=tf.ones_like(d_model_fake)))
     return d_loss, g_loss
+
+# def model_loss(input_real, input_z, out_chanel_dim, smooth = 0.1):
+#
+#     g_model = generator(input_z, out_chanel_dim)
+#     d_model_real, d_logits_real = discriminator(input_real)
+#     d_model_fake, d_logits_fake = discriminator(g_model, reuse=True)
+#
+#     d_loss_real = tf.reduce_mean(
+#         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_real,
+#                                                 labels=tf.ones_like(d_model_real)*(1 - smooth)))
+#
+#     d_loss_fake = tf.reduce_mean(
+#         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
+#                                                 labels=tf.ones_like(d_model_fake)
+#                                                 )
+#     )
+#
+#     d_loss = d_loss_real + d_loss_fake
+#
+#     g_loss = tf.reduce_mean(
+#         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
+#                                                 labels=tf.ones_like(d_model_fake)
+#                                                 )
+#     )
+#
+#     return d_loss, g_loss
 
 def model_opt(d_loss, g_loss, learning_rate, beta1):
 
@@ -129,7 +153,7 @@ def show_generator_output(sess, n_images, input_z, output_chanel_dim, image_mode
     if plot:
         pyplot.show(images_grid, cmap=cmap)
         pyplot.show()
-
+    mpimg.im
     mpimg.imsave(path, images_grid)
 
 
@@ -142,17 +166,22 @@ def model_inputs(image_witdh, image_height, image_chanels, z_dim):
     return input_real, input_z, learning_rate
 
 
-def train(epoch_count, batch_size, z_dim, learning_rate, beta1, get_batches, data_shape, data_image_mode, path):
+def train(epoch_count, batch_size, z_dim, learning_rate, beta1, get_batches, data_shape, data_image_mode, path, logdir):
 
     input_real, input_z, lr = model_inputs(data_shape[1], data_shape[2], data_shape[3], z_dim)
 
     d_loss, g_loss = model_loss(input_real, input_z, data_shape[3])
     d_opt, g_opt = model_opt(d_loss, g_loss, learning_rate, beta1)
 
+    tf.summary.scalar('discriminator_loss', d_loss)
+    tf.summary.scalar('generator_loss', g_loss)
+
     step = 0
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
+        merged = tf.summary.merge_all()
+        writer = tf.summary.FileWriter(logdir, sess.graph)
         for epoch_i in range(epoch_count):
 
             for batch_images in get_batches(batch_size):
@@ -163,7 +192,8 @@ def train(epoch_count, batch_size, z_dim, learning_rate, beta1, get_batches, dat
                 batch_images = batch_images *2
 
                 _ = sess.run(d_opt, feed_dict = {input_real: batch_images, input_z:batch_z, lr: learning_rate})
-                _ = sess.run(g_opt, feed_dict = {input_z: batch_z, input_real:batch_images})
+                summary, _ = sess.run([merged, g_opt], feed_dict = {input_z: batch_z, input_real:batch_images})
+                writer.add_summary(summary, step)
 
                 if step % 10 == 0:
                     train_loss_d = d_loss.eval({input_z: batch_z, input_real:batch_images})
@@ -171,6 +201,11 @@ def train(epoch_count, batch_size, z_dim, learning_rate, beta1, get_batches, dat
                     print("- epoch {}/{} ".format(epoch_i+1, epoch_count),
                           "| discriminator loss: {:.4f}...".format(train_loss_d),
                           "| generator loss: {:.4f}".format(train_loss_g))
+
+                # if step % 5 == 1:
+                #     _ = show_generator_output(sess, 16, input_z, data_shape[3], data_image_mode, os.path.join(path,str(step) + '.png'))
+                # if step % 50 == 1:
+                #     _ = show_generator_output(sess, 16, input_z, data_shape[3], data_image_mode, os.path.join(path,str(step) + '.png'), True)
 
 
 
@@ -192,5 +227,5 @@ epochs = 100
 mnist_dataset = helper.Dataset('celeba', glob(os.path.join(data_dir, 'CelebA/images/*.jpg')))
 with tf.Graph().as_default():
     train(epochs, batch_size, z_dim, learning_rate, beta1, mnist_dataset.get_batches,
-          mnist_dataset.shape, mnist_dataset.image_mode, path)
+          mnist_dataset.shape, mnist_dataset.image_mode, path, "../log")
 
