@@ -185,7 +185,7 @@ beta1 = 0.5
 
 path = 'generated_celeba'
 #
-os.makedirs(path)
+# os.makedirs(path)
 
 epochs = 100
 
