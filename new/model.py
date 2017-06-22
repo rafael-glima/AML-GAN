@@ -71,55 +71,33 @@ def generator(z, out_chanel_dim, is_train=True):
 
         return out
 
-def model_loss(input_real, input_z, out_channel_dim, smooth = 0.1):
-    """
-    Get the loss for the discriminator and generator
-    :param input_real: Images from the real dataset
-    :param input_z: Z input
-    :param out_channel_dim: The number of channels in the output image
-    :return: A tuple of (discriminator loss, generator loss)
-    """
-    g_model = generator(input_z, out_channel_dim)
+
+
+def model_loss(input_real, input_z, out_chanel_dim, smooth = 0.1):
+
+    g_model = generator(input_z, out_chanel_dim)
     d_model_real, d_logits_real = discriminator(input_real)
     d_model_fake, d_logits_fake = discriminator(g_model, reuse=True)
+
     d_loss_real = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_real,
-                                                labels=tf.ones_like(d_model_real) * (1 - smooth)))
+                                                labels=tf.ones_like(d_model_real)*(1 - smooth)))
+
     d_loss_fake = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
-                                                labels=tf.zeros_like(d_model_fake)))
+                                                labels=tf.zeros_like(d_model_fake)
+                                                )
+    )
+
     d_loss = d_loss_real + d_loss_fake
 
     g_loss = tf.reduce_mean(
         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
-                                                labels=tf.ones_like(d_model_fake)))
-    return d_loss, g_loss
+                                                labels=tf.ones_like(d_model_fake)
+                                                )
+    )
 
-# def model_loss(input_real, input_z, out_chanel_dim, smooth = 0.1):
-#
-#     g_model = generator(input_z, out_chanel_dim)
-#     d_model_real, d_logits_real = discriminator(input_real)
-#     d_model_fake, d_logits_fake = discriminator(g_model, reuse=True)
-#
-#     d_loss_real = tf.reduce_mean(
-#         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_real,
-#                                                 labels=tf.ones_like(d_model_real)*(1 - smooth)))
-#
-#     d_loss_fake = tf.reduce_mean(
-#         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
-#                                                 labels=tf.ones_like(d_model_fake)
-#                                                 )
-#     )
-#
-#     d_loss = d_loss_real + d_loss_fake
-#
-#     g_loss = tf.reduce_mean(
-#         tf.nn.sigmoid_cross_entropy_with_logits(logits=d_logits_fake,
-#                                                 labels=tf.ones_like(d_model_fake)
-#                                                 )
-#     )
-#
-#     return d_loss, g_loss
+    return d_loss, g_loss
 
 def model_opt(d_loss, g_loss, learning_rate, beta1):
 
@@ -210,7 +188,7 @@ def train(epoch_count, batch_size, z_dim, learning_rate, beta1, get_batches, dat
 
 
 data_dir = '../data'
-# helper.download_extract('celeba', data_dir)
+
 
 
 batch_size = 64
